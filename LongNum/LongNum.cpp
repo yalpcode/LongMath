@@ -21,9 +21,12 @@ void LongNum::normalize() {
     }
 }
 
-LongNum::LongNum(const long double x) {
+LongNum::LongNum() : sign(0), mant(1), exp(0) {}
+
+LongNum::LongNum(const long double x, uint32_t prec) {
     sign = std::signbit(x);
     exp = static_cast<int>(std::ceil(std::log2(x)));
+    this->prec = prec;
 
     long double frac = x / std::pow(2, exp);
 
@@ -39,7 +42,7 @@ LongNum::LongNum(const long double x) {
     normalize();
 }
 
-LongNum::LongNum(const std::string& s) {}
+LongNum::LongNum(const std::string& s, uint32_t prec) {}
 
 LongNum::LongNum(const LongNum& other)
     : sign(other.sign), mant(other.mant), exp(other.exp), prec(other.prec) {}
@@ -166,9 +169,8 @@ LongNum LongNum::operator-(const LongNum& other) const {
 
     LongNum neg_other = other;
     neg_other.sign = !other.sign;
-    result = *this + neg_other;
 
-    return result;
+    return *this + neg_other;
 }
 
 LongNum LongNum::operator*(const LongNum& other) const {
@@ -242,24 +244,10 @@ LongNum LongNum::operator/(const LongNum& other) const {
     dividend.pop_back();
     char flag = 0;
     while (quotient.size() < prec) {
-        std::cout << std::endl;
-        std::cout << "0.";
-        for (int bit : remainder) {
-            std::cout << bit;
-        }
-        std::cout << std::endl;
-        std::cout << "0.";
-        for (int bit : divisor) {
-            std::cout << bit;
-        }
-        std::cout << std::endl;
         if (divisor <= remainder) {
             remainder = subtract(remainder, divisor);
             quotient.push_back(true);
-            if (flag < 2) {
-                ++result.exp;
-                flag = 1;
-            }
+            flag = 1;
         } else {
             if (flag) {
                 quotient.push_back(false);
@@ -270,22 +258,12 @@ LongNum LongNum::operator/(const LongNum& other) const {
             remainder.erase(remainder.begin());
         }
 
-        std::cout << "0.";
-        for (int bit : remainder) {
-            std::cout << bit;
-        }
-
         if (dividend.empty()) {
-            flag = 2;
             remainder.push_back(0);
         } else {
             remainder.push_back(dividend.back());
             dividend.pop_back();
         }
-
-        std::cout << std::find(remainder.begin(), remainder.end(), 1) -
-                         remainder.begin()
-                  << std::endl;
     }
 
     result.mant = quotient;
@@ -388,4 +366,4 @@ std::ostream& operator<<(std::ostream& os, const LongNum& f) {
 }
 
 LongNum operator""_longnum(long double number) { return LongNum(number); }
-};
+};  // namespace LongMath

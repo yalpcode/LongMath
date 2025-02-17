@@ -7,17 +7,15 @@ class LongNum {
     bool sign;
     std::vector<bool> mant;
     int32_t exp;
-    uint32_t prec = 100;
+    uint32_t prec = 20;
 
     void normalize();
 
    public:
-    LongNum() = default;
+    LongNum();
 
-    // explicit LongNum(int64_t);
-    // explicit LongNum(uint64_t);
-    explicit LongNum(long double);
-    explicit LongNum(const std::string&);
+    explicit LongNum(long double, uint32_t = 20);
+    explicit LongNum(const std::string&, uint32_t = 20);
 
     LongNum(const LongNum&);
     LongNum(const LongNum&&);
