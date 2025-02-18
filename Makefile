@@ -1,11 +1,13 @@
-default_target:
-	cmake . -B build && cd build && make && ./main
+PRECISION ?= 100
 
-start:
+default_target:
+	cmake . -B build && cd build && make
+
+main:
 	cd build && ./main
 
 pi:
-	cmake . -B build && cd build && make && ./pitest
+	cd build && ./pitest --precision=$(PRECISION)
 
 test:
-	cmake . -B build && cd build && make && ./mathtest
+	cd build && ./mathtest

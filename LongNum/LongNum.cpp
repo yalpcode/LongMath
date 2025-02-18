@@ -128,15 +128,16 @@ bool LongNum::operator>(const LongNum& other) const {
 
     if (exp != other.exp) return (exp > other.exp) ^ sign;
 
-    auto m1(mant);
-    auto m2(other.mant);
+    const std::vector<bool>& m1 = mant;
+    const std::vector<bool>& m2 = other.mant;
     size_t size = std::max(m1.size(), m2.size());
 
-    m1.resize(size);
-    m2.resize(size);
+    for (size_t i = 0; i < size; ++i) {
+        bool bit1 = (i < m1.size()) ? m1[i] : 0;
+        bool bit2 = (i < m2.size()) ? m2[i] : 0;
 
-    for (size_t i = 0; i < size; ++i)
-        if (m1[i] != m2[i]) return (m1[i] > m2[i]) ^ sign;
+        if (bit1 != bit2) return (bit1 > bit2) ^ sign;
+    }
 
     return false;
 }
@@ -167,45 +168,54 @@ LongNum LongNum::operator+(const LongNum& other) const {
         int32_t exp2 = other.exp;
         res.exp = std::max(exp1, exp2);
 
-        std::vector<bool> m1(mant);
-        std::vector<bool> m2(other.mant);
+        const std::vector<bool>& m1 = mant;
+        const std::vector<bool>& m2 = other.mant;
 
-        while (exp1 != res.exp) {
-            m1.insert(m1.begin(), 0);
-            ++exp1;
-        }
+        size_t offset1 = res.exp - exp1;
+        size_t offset2 = res.exp - exp2;
 
-        while (exp2 != res.exp) {
-            m2.insert(m2.begin(), 0);
-            ++exp2;
-        }
-
-        size_t size = std::max(m1.size(), m2.size());
-
-        m1.resize(size);
-        m2.resize(size);
-
-        size_t len = 1 + size;
-
-        res.sign = sign;
-        res.mant.resize(len);
+        size_t size1 = m1.size() + offset1;
+        size_t size2 = m2.size() + offset2;
+        size_t size = std::max(size1, size2);
+        res.mant.resize(size + 1);
 
         bool carry = false;
-        for (int i = size - 1; i >= 0; --i) {
-            bool sum = m1[i] ^ m2[i] ^ carry;
-            carry = (m1[i] && m2[i]) || (m1[i] && carry) || (m2[i] && carry);
-            res.mant[i + 1] = sum;
+
+        const size_t size1_o = m1.size() + (size - size1);
+        const size_t size2_o = m2.size() + (size - size2);
+
+        for (size_t i = 0; i < size; ++i) {
+            bool bit1;
+            if (i < size - size1) {
+                bit1 = 0;
+            } else if (i < size1_o) {
+                bit1 = m1[size1_o - 1 - i];
+            } else {
+                bit1 = 0;
+            }
+            bool bit2;
+            if (i < size - size2) {
+                bit2 = 0;
+            } else if (i < size2_o) {
+                bit2 = m2[size2_o - 1 - i];
+            } else {
+                bit2 = 0;
+            }
+
+            bool sum = bit1 ^ bit2 ^ carry;
+            carry = (bit1 && bit2) || (bit1 && carry) || (bit2 && carry);
+            res.mant[size - i] = sum;
         }
         res.mant[0] = carry;
         ++res.exp;
 
         res.removeZeroes();
 
+        res.sign = sign;
         return res;
     }
 
     if (sign) return other - (-(*this));
-
     return *this - (-other);
 }
 
@@ -219,35 +229,44 @@ LongNum LongNum::operator-(const LongNum& other) const {
         int32_t exp2 = cmp ? other.exp : exp;
         res.exp = std::max(exp1, exp2);
 
-        std::vector<bool> m1(cmp ? mant : other.mant);
-        std::vector<bool> m2(cmp ? other.mant : mant);
+        const std::vector<bool>& m1 = cmp ? mant : other.mant;
+        const std::vector<bool>& m2 = cmp ? other.mant : mant;
 
-        while (exp1 != res.exp) {
-            m1.insert(m1.begin(), 0);
-            ++exp1;
-        }
+        size_t offset1 = res.exp - exp1;
+        size_t offset2 = res.exp - exp2;
 
-        while (exp2 != res.exp) {
-            m2.insert(m2.begin(), 0);
-            ++exp2;
-        }
-
-        size_t size = std::max(m1.size(), m2.size());
-
-        m1.resize(size);
-        m2.resize(size);
-
-        size_t len = 1 + size;
+        size_t size1 = m1.size() + offset1;
+        size_t size2 = m2.size() + offset2;
+        size_t size = std::max(size1, size2);
+        res.mant.resize(size + 1);
 
         res.sign = !cmp;
-        res.mant.resize(len);
+
+        const size_t size1_o = m1.size() + (size - size1);
+        const size_t size2_o = m2.size() + (size - size2);
 
         bool borrow = false;
-        for (int i = size - 1; i >= 0; --i) {
-            bool diff = m1[i] ^ m2[i] ^ borrow;
-            borrow =
-                (!m1[i] && m2[i]) || (!m1[i] && borrow) || (m2[i] && borrow);
-            res.mant[i + 1] = diff;
+        for (size_t i = 0; i < size; ++i) {
+            bool bit1;
+            if (i < size - size1) {
+                bit1 = 0;
+            } else if (i < size1_o) {
+                bit1 = m1[size1_o - 1 - i];
+            } else {
+                bit1 = 0;
+            }
+            bool bit2;
+            if (i < size - size2) {
+                bit2 = 0;
+            } else if (i < size2_o) {
+                bit2 = m2[size2_o - 1 - i];
+            } else {
+                bit2 = 0;
+            }
+
+            bool diff = bit1 ^ bit2 ^ borrow;
+            borrow = (!bit1 && bit2) || (!bit1 && borrow) || (bit2 && borrow);
+            res.mant[size - i] = diff;
         }
 
         ++res.exp;
