@@ -5,33 +5,48 @@
 #include <sstream>
 
 namespace LongMath {
-void LongNum::normalize() {
-    while (!mant.empty() && mant.back() == 0) {
-        mant.pop_back();
+void LongNum::setPrecision(uint32_t prec) { LongNum::prec = prec; }
+
+void LongNum::removeZeroes() {
+    size_t n = std::max(1, exp);
+
+    while (mant.size() > n && !mant.back()) mant.pop_back();
+
+    while (mant.size() > 1 && !mant.front()) {
+        mant.erase(mant.begin());
+        --exp;
     }
 
-    while (mant.size() >= 2 && *mant.rbegin() && *(mant.rbegin() + 1)) {
-        mant.pop_back();
+    while (mant.size() > 1 && !mant.back()) mant.pop_back();
+
+    if (isZero()) {
+        exp = 1;
+        sign = 1;
     }
 
-    if (mant.empty()) {
-        exp = 0;
-        sign = false;
-        mant.push_back(0);
-    }
+    normalize();
 }
 
-LongNum::LongNum() : sign(0), mant(1), exp(0) {}
+void LongNum::normalize() {
+    mant.resize(std::min(size_t(prec * k_mant * 2), mant.size()));
+}
 
-LongNum::LongNum(const long double x, uint32_t prec) {
+LongNum::LongNum() : sign(0), mant(1), exp(1) {}
+
+LongNum::LongNum(const long double x) {
+    if (x == 0.) {
+        sign = 0;
+        mant.resize(1);
+        exp = 1;
+        return;
+    }
     sign = std::signbit(x);
-    exp = static_cast<int>(std::ceil(std::log2(x)));
-    this->prec = prec;
+    exp = static_cast<int>(std::ceil(std::log2(std::abs(x))));
+    if (exp >= 0) ++exp;
 
-    long double frac = x / std::pow(2, exp);
+    long double frac = std::abs(x) / std::pow(2, exp);
 
-    mant.clear();
-    for (uint32_t i = 0; i < prec; ++i) {
+    for (uint32_t i = 0; i < prec * k_mant; ++i) {
         frac *= 2;
         bool bit = static_cast<int>(frac);
         mant.push_back(bit);
@@ -39,254 +54,56 @@ LongNum::LongNum(const long double x, uint32_t prec) {
         if (frac == 0.0) break;
     }
 
-    normalize();
+    removeZeroes();
 }
 
-LongNum::LongNum(const std::string& s, uint32_t prec) {}
+LongNum::LongNum(std::string s) {
+    sign = 0;
+    if (s.front() == '-') {
+        sign = 1;
+        s.erase(s.begin());
+    }
+    size_t idxPoint = std::find(s.begin(), s.end(), '.') - s.begin();
+    size_t expCount = s.size() - idxPoint - 1;
+    s.erase(s.begin() + idxPoint);
+    do {
+        mant.push_back((s.back() - '0') % 2);
+        s = divideByTwo(s);
+
+    } while (s != "0");
+
+    std::reverse(mant.begin(), mant.end());
+
+    exp = mant.size();
+    for (size_t i = 0; i < expCount; ++i) {
+        *this /= 10;
+    }
+
+    removeZeroes();
+}
 
 LongNum::LongNum(const LongNum& other)
-    : sign(other.sign), mant(other.mant), exp(other.exp), prec(other.prec) {}
+    : sign(other.sign), mant(other.mant), exp(other.exp) {}
 
-LongNum::LongNum(const LongNum&& other) {
-    sign = std::move(other.sign);
-    mant = std::move(other.mant);
-    exp = std::move(other.exp);
-    prec = std::move(other.prec);
-}
+LongNum::LongNum(LongNum&& other)
+    : sign(std::move(other.sign)),
+      mant(std::move(other.mant)),
+      exp(std::move(other.exp)) {}
 
 LongNum& LongNum::operator=(const LongNum& other) {
     sign = other.sign;
     mant = other.mant;
     exp = other.exp;
-    prec = other.prec;
 
     return *this;
 }
 
-LongNum& LongNum::operator=(const LongNum&& other) {
+LongNum& LongNum::operator=(LongNum&& other) {
     sign = std::move(other.sign);
     mant = std::move(other.mant);
     exp = std::move(other.exp);
-    prec = std::move(other.prec);
 
     return *this;
-}
-
-LongNum LongNum::abs() const {
-    LongNum result = *this;
-    result.sign = 0;
-
-    return result;
-}
-
-LongNum LongNum::operator+(const LongNum& other) const {
-    LongNum result;
-
-    if (this->sign == other.sign) {
-        result.sign = this->sign;
-
-        result.exp = std::max(this->exp, other.exp);
-        std::vector<bool> this_mant = this->mant;
-        std::vector<bool> other_mant = other.mant;
-
-        if (this->exp < result.exp) {
-            size_t shift = result.exp - this->exp;
-            this_mant.insert(this_mant.begin(), shift, false);
-        } else if (other.exp < result.exp) {
-            size_t shift = result.exp - other.exp;
-            other_mant.insert(other_mant.begin(), shift, false);
-        }
-
-        bool carry = false;
-        size_t max_length = std::max(this_mant.size(), other_mant.size());
-        result.mant.resize(max_length);
-        for (size_t i = 0; i < max_length; ++i) {
-            size_t j = max_length - 1 - i;
-            bool bit1 =
-                (i >= max_length - this_mant.size()) ? this_mant[j] : false;
-            bool bit2 =
-                (i >= max_length - other_mant.size()) ? other_mant[j] : false;
-            bool sum = bit1 ^ bit2 ^ carry;
-            carry = (bit1 && bit2) || (bit1 && carry) || (bit2 && carry);
-            result.mant[j] = sum;
-        }
-        if (carry) {
-            result.mant.insert(result.mant.begin(), 1);
-            result.exp += 1;
-        }
-    } else {
-        LongNum larger, smaller;
-
-        if (this->abs() > other.abs()) {
-            larger = *this;
-            smaller = other;
-        } else {
-            larger = other;
-            smaller = *this;
-        }
-
-        result.sign = larger.sign;
-        result.exp = larger.exp;
-
-        std::vector<bool> larger_mant = larger.mant;
-        std::vector<bool> smaller_mant = smaller.mant;
-
-        if (smaller.exp < larger.exp) {
-            size_t shift = larger.exp - smaller.exp;
-            smaller_mant.insert(smaller_mant.begin(), shift, false);
-        }
-
-        bool borrow = false;
-        size_t max_length = std::max(larger_mant.size(), smaller_mant.size());
-        result.mant.resize(max_length);
-        for (size_t i = 0; i < max_length; ++i) {
-            size_t j = max_length - 1 - i;
-            bool bit1 =
-                (i >= max_length - larger_mant.size()) ? larger_mant[j] : false;
-            bool bit2 = (i >= max_length - smaller_mant.size())
-                            ? smaller_mant[j]
-                            : false;
-            bool diff = bit1 ^ bit2 ^ borrow;
-            borrow = (!bit1 && bit2) || (!bit1 && borrow) || (bit2 && borrow);
-            result.mant[j] = diff;
-        }
-        for (size_t i = 0; i < max_length; ++i) {
-            if (result.mant[i]) {
-                result.mant.erase(result.mant.begin(), result.mant.begin() + i);
-                result.exp -= i;
-                break;
-            }
-        }
-    }
-
-    result.normalize();
-
-    return result;
-}
-
-LongNum LongNum::operator-(const LongNum& other) const {
-    LongNum result;
-
-    LongNum neg_other = other;
-    neg_other.sign = !other.sign;
-
-    return *this + neg_other;
-}
-
-LongNum LongNum::operator*(const LongNum& other) const {
-    LongNum result;
-
-    result.sign = this->sign ^ other.sign;
-    result.exp = this->exp + other.exp;
-
-    result.mant.resize(mant.size() + other.mant.size(), false);
-
-    for (int i = mant.size() - 1; i >= 0; --i) {
-        int carry = 0;
-        for (int j = other.mant.size() - 1; j >= 0; --j) {
-            int product =
-                mant[i] * other.mant[j] + result.mant[i + j + 1] + carry;
-            result.mant[i + j + 1] = product & 1;
-            carry = product >> 1;
-        }
-        result.mant[i] = carry;
-    }
-
-    result.normalize();
-
-    return result;
-}
-
-std::vector<bool> subtract(std::vector<bool>& a, const std::vector<bool>& b) {
-    bool borrow = false;
-    size_t max_length = std::max(a.size(), b.size());
-    std::vector<bool> result(max_length);
-    for (size_t i = 0; i < max_length; ++i) {
-        size_t j = max_length - 1 - i;
-        bool bit1 = a[j];
-        bool bit2 = (b.size() - 1 - i >= 0) ? b[b.size() - 1 - i] : false;
-        bool diff = bit1 ^ bit2 ^ borrow;
-        borrow = (!bit1 && bit2) || (!bit1 && borrow) || (bit2 && borrow);
-        result[j] = diff;
-    }
-
-    return result;
-}
-
-bool operator<=(const std::vector<bool>& lhs, const std::vector<bool>& rhs) {
-    if (lhs.size() != rhs.size()) {
-        return lhs.size() < rhs.size();
-    }
-    size_t max_size = std::max(lhs.size(), rhs.size());
-    for (size_t i = 0; i < max_size; ++i) {
-        if (lhs[i] < rhs[i]) return true;
-        if (lhs[i] > rhs[i]) return false;
-    }
-    return true;
-}
-
-LongNum LongNum::operator/(const LongNum& other) const {
-    LongNum result;
-
-    result.sign = this->sign ^ other.sign;
-    result.exp = this->exp - other.exp;
-
-    std::cout << *this << std::endl << other << std::endl;
-
-    std::vector<bool> dividend = this->mant;
-    std::vector<bool> divisor = other.mant;
-    std::vector<bool> quotient;
-
-    std::reverse(dividend.begin(), dividend.end());
-
-    std::vector<bool> remainder;
-    remainder.push_back(dividend.back());
-    dividend.pop_back();
-    char flag = 0;
-    while (quotient.size() < prec) {
-        if (divisor <= remainder) {
-            remainder = subtract(remainder, divisor);
-            quotient.push_back(true);
-            flag = 1;
-        } else {
-            if (flag) {
-                quotient.push_back(false);
-            }
-        }
-
-        while (!remainder.empty() && !remainder.front()) {
-            remainder.erase(remainder.begin());
-        }
-
-        if (dividend.empty()) {
-            remainder.push_back(0);
-        } else {
-            remainder.push_back(dividend.back());
-            dividend.pop_back();
-        }
-    }
-
-    result.mant = quotient;
-
-    result.normalize();
-
-    return result;
-}
-
-LongNum& LongNum::operator+=(const LongNum& other) {
-    return *this = std::move(*this + other);
-}
-
-LongNum& LongNum::operator-=(const LongNum& other) {
-    return *this = std::move(*this - other);
-}
-
-LongNum& LongNum::operator*=(const LongNum& other) {
-    return *this = std::move(*this * other);
-}
-
-LongNum& LongNum::operator/=(const LongNum& other) {
-    return *this = std::move(*this / other);
 }
 
 bool LongNum::operator==(const LongNum& other) const {
@@ -306,58 +123,301 @@ bool LongNum::operator!=(const LongNum& other) const {
     return !(*this == other);
 }
 
-bool LongNum::operator<(const LongNum& other) const {
-    if (sign && !other.sign) return true;
-    if (!sign && other.sign) return false;
+bool LongNum::operator>(const LongNum& other) const {
+    if (sign != other.sign) return sign < other.sign;
 
-    if (sign) {
-        if (exp > other.exp) return true;
-        if (exp < other.exp) return false;
+    if (exp != other.exp) return (exp > other.exp) ^ sign;
 
-        for (size_t i = 0; i < std::min(mant.size(), other.mant.size()); ++i) {
-            if (mant[i] > other.mant[i]) return true;
-            if (mant[i] < other.mant[i]) return false;
-        }
-    } else {
-        if (exp < other.exp) return true;
-        if (exp > other.exp) return false;
+    auto m1(mant);
+    auto m2(other.mant);
+    size_t size = std::max(m1.size(), m2.size());
 
-        for (size_t i = 0; i < std::min(mant.size(), other.mant.size()); ++i) {
-            if (mant[i] < other.mant[i]) return true;
-            if (mant[i] > other.mant[i]) return false;
-        }
-    }
+    m1.resize(size);
+    m2.resize(size);
+
+    for (size_t i = 0; i < size; ++i)
+        if (m1[i] != m2[i]) return (m1[i] > m2[i]) ^ sign;
 
     return false;
 }
 
-bool LongNum::operator>(const LongNum& other) const {
-    return !(*this < other) && (*this != other);
+bool LongNum::operator<(const LongNum& other) const {
+    return !(*this > other) && (*this != other);
 }
 
 bool LongNum::operator>=(const LongNum& other) const {
-    return !(*this < other);
+    return (*this > other) || (*this == other);
 }
 
 bool LongNum::operator<=(const LongNum& other) const {
-    return !(*this < other) || (*this == other);
+    return !(*this > other);
 }
 
-uint32_t LongNum::getPrecision() const { return this->prec; }
+LongNum LongNum::operator-() const {
+    LongNum res(*this);
+    res.sign ^= 1;
 
-void LongNum::setPrecision(uint32_t prec) { this->prec = prec; }
+    return res;
+}
 
-std::string LongNum::toString() const {
-    std::ostringstream oss;
-    if (sign) oss << "-";
+LongNum LongNum::operator+(const LongNum& other) const {
+    if (sign == other.sign) {
+        LongNum res;
+        int32_t exp1 = exp;
+        int32_t exp2 = other.exp;
+        res.exp = std::max(exp1, exp2);
 
-    oss << "0.";
-    for (int bit : mant) {
-        oss << bit;
+        std::vector<bool> m1(mant);
+        std::vector<bool> m2(other.mant);
+
+        while (exp1 != res.exp) {
+            m1.insert(m1.begin(), 0);
+            ++exp1;
+        }
+
+        while (exp2 != res.exp) {
+            m2.insert(m2.begin(), 0);
+            ++exp2;
+        }
+
+        size_t size = std::max(m1.size(), m2.size());
+
+        m1.resize(size);
+        m2.resize(size);
+
+        size_t len = 1 + size;
+
+        res.sign = sign;
+        res.mant.resize(len);
+
+        bool carry = false;
+        for (int i = size - 1; i >= 0; --i) {
+            bool sum = m1[i] ^ m2[i] ^ carry;
+            carry = (m1[i] && m2[i]) || (m1[i] && carry) || (m2[i] && carry);
+            res.mant[i + 1] = sum;
+        }
+        res.mant[0] = carry;
+        ++res.exp;
+
+        res.removeZeroes();
+
+        return res;
     }
 
-    oss << " * 2^" << exp;
-    return oss.str();
+    if (sign) return other - (-(*this));
+
+    return *this - (-other);
+}
+
+LongNum LongNum::operator-(const LongNum& other) const {
+    if (!sign && !other.sign) {
+        bool cmp = *this > other;
+
+        LongNum res;
+
+        int32_t exp1 = cmp ? exp : other.exp;
+        int32_t exp2 = cmp ? other.exp : exp;
+        res.exp = std::max(exp1, exp2);
+
+        std::vector<bool> m1(cmp ? mant : other.mant);
+        std::vector<bool> m2(cmp ? other.mant : mant);
+
+        while (exp1 != res.exp) {
+            m1.insert(m1.begin(), 0);
+            ++exp1;
+        }
+
+        while (exp2 != res.exp) {
+            m2.insert(m2.begin(), 0);
+            ++exp2;
+        }
+
+        size_t size = std::max(m1.size(), m2.size());
+
+        m1.resize(size);
+        m2.resize(size);
+
+        size_t len = 1 + size;
+
+        res.sign = !cmp;
+        res.mant.resize(len);
+
+        bool borrow = false;
+        for (int i = size - 1; i >= 0; --i) {
+            bool diff = m1[i] ^ m2[i] ^ borrow;
+            borrow =
+                (!m1[i] && m2[i]) || (!m1[i] && borrow) || (m2[i] && borrow);
+            res.mant[i + 1] = diff;
+        }
+
+        ++res.exp;
+
+        res.removeZeroes();
+
+        return res;
+    }
+
+    if (sign && other.sign) return (-other) - (-(*this));
+
+    return *this + (-other);
+}
+
+LongNum LongNum::operator*(const LongNum& other) const {
+    size_t len = mant.size() + other.mant.size();
+
+    LongNum res;
+
+    res.sign = sign ^ other.sign;
+    res.mant.assign(len, 0);
+    res.exp = exp + other.exp;
+
+    for (int i = mant.size() - 1; i >= 0; --i) {
+        int carry = 0;
+        for (int j = other.mant.size() - 1; j >= 0; --j) {
+            int product = mant[i] * other.mant[j] + res.mant[i + j + 1] + carry;
+            res.mant[i + j + 1] = product & 1;
+            carry = product >> 1;
+        }
+        res.mant[i] = carry;
+    }
+
+    res.removeZeroes();
+
+    return res;
+}
+
+LongNum LongNum::operator/(const LongNum& other) const {
+    LongNum res = *this * other.inverse();
+
+    size_t intPart = std::max(0, exp);
+
+    if (intPart > res.mant.size() - 1) return res;
+
+    size_t i = res.mant.size() - 1 - intPart;
+    size_t n = std::max(0, res.exp);
+
+    if (i > n && res.mant[i]) {
+        while (i > n && res.mant[i]) --i;
+
+        if (res.mant[i]) {
+            res.mant.erase(res.mant.begin() + n, res.mant.end());
+            res = res + (res.sign ? -1 : 1);
+        } else {
+            res.mant.erase(res.mant.begin() + i + 1, res.mant.end());
+            res.mant[i] = 1;
+        }
+    }
+
+    return res;
+}
+
+LongNum& LongNum::operator+=(const LongNum& other) {
+    return *this = std::move(*this + other);
+}
+
+LongNum& LongNum::operator-=(const LongNum& other) {
+    return *this = std::move(*this - other);
+}
+
+LongNum& LongNum::operator*=(const LongNum& other) {
+    return *this = std::move(*this * other);
+}
+
+LongNum& LongNum::operator/=(const LongNum& other) {
+    return *this = std::move(*this / other);
+}
+
+LongNum LongNum::inverse() const {
+    if (isZero())
+        throw std::string("LongNum LongNum::inverse() - division by zero!");
+
+    LongNum x(*this);
+    x.sign = 0;
+
+    LongNum d(1.);
+
+    LongNum res;
+    res.sign = sign;
+    res.exp = 1;
+    res.mant.resize(0);
+
+    while (x < 1.) {
+        ++x.exp;
+        ++res.exp;
+    }
+
+    while (d < x) ++d.exp;
+
+    res.exp -= d.exp - 1;
+
+    size_t numbers = 0;
+    size_t intPart = std::max(0, res.exp);
+    size_t maxNumbers = prec * k_mant + intPart;
+    do {
+        bool div = 0;
+
+        if (d >= x) {
+            div = 1;
+            d -= x;
+        }
+
+        ++d.exp;
+
+        res.mant.push_back(div);
+        ++numbers;
+    } while (!d.isZero() && numbers < maxNumbers);
+
+    return res;
+}
+
+LongNum LongNum::abs() const {
+    LongNum res(*this);
+    res.sign = 0;
+
+    return res;
+}
+
+LongNum LongNum::sqrt() const {
+    if (sign) throw std::string("LongNum LongNum::sqrt() - number is negative");
+
+    if (isZero()) return 0;
+
+    LongMath::LongNum x = *this;
+    for (size_t i = 0; i < prec; ++i) {
+        x = (x + (*this) / x) / 2;
+    }
+    return x;
+}
+
+bool LongNum::isZero() const { return mant.size() == 1 && !mant.front(); }
+
+std::string LongNum::toString(uint32_t precision) const {
+    std::string res = "0";
+    for (size_t i = 0; i < mant.size(); ++i) {
+        if (!mant[i]) {
+            continue;
+        }
+        std::string t = "1";
+        for (size_t j = 0; j < mant.size() - i; ++j) {
+            t = multiplyByTwo(t);
+        }
+        res = addStrings(res, t);
+    }
+
+    res.append(prec * k_mant, '0');
+    for (int32_t i = 0; i <= int32_t(mant.size() - exp); ++i) {
+        res = divideByTwo(res);
+    }
+    if (res.size() <= prec * k_mant) {
+        res.insert(res.begin(), prec * k_mant - res.size() + 1, '0');
+    }
+    res.insert(res.begin() + (res.size() - prec * k_mant), '.');
+
+    if (sign) {
+        res.insert(res.begin(), '-');
+    }
+
+    return roundStrings(res, precision);
 }
 
 std::ostream& operator<<(std::ostream& os, const LongNum& f) {
@@ -365,5 +425,116 @@ std::ostream& operator<<(std::ostream& os, const LongNum& f) {
     return os;
 }
 
-LongNum operator""_longnum(long double number) { return LongNum(number); }
+std::string divideByTwo(const std::string& number) {
+    std::string result;
+    int carry = 0;
+
+    for (char digit : number) {
+        int currentDigit = digit - '0';
+        int value = currentDigit + carry * 10;
+        int quotient = value / 2;
+        carry = value % 2;
+
+        if (!result.empty() || quotient != 0) {
+            result.push_back(quotient + '0');
+        }
+    }
+
+    if (result.empty()) {
+        return "0";
+    }
+
+    return result;
+}
+
+std::string multiplyByTwo(const std::string& number) {
+    std::string result;
+    int carry = 0;
+
+    for (int i = number.length() - 1; i >= 0; --i) {
+        int currentDigit = number[i] - '0';
+        int value = currentDigit * 2 + carry;
+        carry = value / 10;
+        result.push_back((value % 10) + '0');
+    }
+
+    if (carry != 0) {
+        result.push_back(carry + '0');
+    }
+
+    std::reverse(result.begin(), result.end());
+
+    return result;
+}
+
+std::string addStrings(const std::string& num1, const std::string& num2) {
+    std::string result;
+    int carry = 0;
+    int i = num1.length() - 1;
+    int j = num2.length() - 1;
+
+    while (i >= 0 || j >= 0 || carry > 0) {
+        int digit1 = (i >= 0) ? num1[i] - '0' : 0;
+        int digit2 = (j >= 0) ? num2[j] - '0' : 0;
+        int sum = digit1 + digit2 + carry;
+        carry = sum / 10;
+        result.push_back((sum % 10) + '0');
+
+        if (i >= 0) --i;
+        if (j >= 0) --j;
+    }
+
+    std::reverse(result.begin(), result.end());
+    return result;
+}
+
+std::string roundStrings(const std::string& number, int n) {
+    size_t decimalPointPos = number.find('.');
+
+    if (decimalPointPos == std::string::npos) {
+        return number;
+    }
+
+    size_t roundPos = decimalPointPos + n + 1;
+
+    if (roundPos >= number.length()) {
+        return number;
+    }
+
+    std::string roundedStr = number.substr(0, roundPos);
+
+    char nextChar = number[roundPos];
+    if (nextChar >= '5' && nextChar <= '9') {
+        int i = roundedStr.length() - 1;
+        while (i >= 0) {
+            if (roundedStr[i] == '.') {
+                --i;
+                continue;
+            }
+            if (roundedStr[i] < '9') {
+                ++roundedStr[i];
+                break;
+            } else {
+                roundedStr[i] = '0';
+                --i;
+            }
+        }
+
+        if (i < 0) {
+            roundedStr.insert(roundedStr.begin(), '1');
+        }
+    }
+
+    size_t lastNonZero = roundedStr.find_last_not_of('0');
+    if (lastNonZero != std::string::npos && roundedStr[lastNonZero] == '.') {
+        --lastNonZero;
+    }
+    roundedStr = roundedStr.substr(0, lastNonZero + 1);
+
+    return roundedStr;
+}
 };  // namespace LongMath
+
+LongMath::LongNum operator""_longnum(long double number) {
+    return LongMath::LongNum(number);
+}

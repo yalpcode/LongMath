@@ -3,3 +3,9 @@ default_target:
 
 start:
 	cd build && ./main
+
+pi:
+	cmake . -B build && cd build && make && ./pitest
+
+test:
+	cmake . -B build && cd build && make && ./mathtest
