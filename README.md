@@ -9,7 +9,15 @@ Go to it:
 ```
 cd LongMath
 ```
-Run:
+Build:
 ```
 make
+```
+Run tests:
+```
+make test
+```
+Run calculation pi:
+```
+make pi PRECISION={Количество знаков после запятой}
 ```
