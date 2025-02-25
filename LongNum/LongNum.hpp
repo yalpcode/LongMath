@@ -39,8 +39,6 @@ class LongNum {
     LongNum operator-() const;
 
     LongNum operator+(const LongNum&) const;
-    void NewFunction(size_t size, const std::__1::vector<bool>& m1,
-                     size_t size1, const std::__1::vector<bool>& m2) const;
     LongNum operator-(const LongNum&) const;
     LongNum operator*(const LongNum&) const;
     LongNum operator/(const LongNum&) const;
