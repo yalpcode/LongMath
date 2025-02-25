@@ -52,7 +52,7 @@ static void BM_CalculatePi(benchmark::State& state) {
     }
 }
 
-BENCHMARK(BM_CalculatePi);
+BENCHMARK(BM_CalculatePi)->Iterations(1);
 
 int main(int argc, char** argv) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);

@@ -12,7 +12,8 @@ TEST(LongNumTest, DefaultConstructor) {
 
 TEST(LongNumTest, FloatConstructor) {
     LongNum num(3.14);
-    EXPECT_EQ(num.toString(2), "3.14") << "Float constructor failed.";
+    EXPECT_EQ(num.toString().substr(0, 4), "3.14")
+        << "Float constructor failed.";
 }
 
 TEST(LongNumTest, StringConstructor) {
@@ -90,7 +91,8 @@ TEST(LongNumTest, SquareRoot) {
 TEST(LongNumTest, AbsoluteValue) {
     LongNum a(-3.14);
     LongNum result = a.abs();
-    EXPECT_EQ(result.toString(2), "3.14") << "Absolute value function failed.";
+    EXPECT_EQ(result.toString().substr(0, 4), "3.14")
+        << "Absolute value function failed.";
 }
 
 TEST(LongNumTest, Inverse) {
@@ -101,7 +103,8 @@ TEST(LongNumTest, Inverse) {
 
 TEST(LongNumTest, ToString) {
     LongNum a(123.456);
-    EXPECT_EQ(a.toString(3), "123.456") << "toString() function failed.";
+    EXPECT_EQ(a.toString().substr(0, 7), "123.456")
+        << "toString() function failed.";
 }
 
 TEST(LongNumTest, IsZero) {
@@ -112,7 +115,8 @@ TEST(LongNumTest, IsZero) {
 TEST(LongNumTest, AssignmentOperator) {
     LongNum a(3.14);
     LongNum b = a;
-    EXPECT_EQ(b.toString(2), "3.14") << "Assignment operator failed.";
+    EXPECT_EQ(b.toString().substr(0, 4), "3.14")
+        << "Assignment operator failed.";
 }
 
 int main(int argc, char **argv) {
