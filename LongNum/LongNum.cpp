@@ -425,7 +425,7 @@ std::string LongNum::toString(uint32_t precision) const {
     }
 
     res.append(prec * k_mant, '0');
-    for (int32_t i = 0; i <= int32_t(mant.size() - exp); ++i) {
+    for (int32_t i = 0; i <= int32_t(mant.size()) - exp; ++i) {
         res = divideByTwo(res);
     }
     if (res.size() <= prec * k_mant) {

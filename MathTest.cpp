@@ -117,5 +117,6 @@ TEST(LongNumTest, AssignmentOperator) {
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
+    LongNum::setPrecision(100);
     return RUN_ALL_TESTS();
 }

@@ -11,10 +11,10 @@ else()
     set(CMAKE_CXX_COMPILER "clang++")
 endif()
 
+add_compile_options(-O2 -O3)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-add_compile_options(-O2 -O3)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-Wthread-safety)
