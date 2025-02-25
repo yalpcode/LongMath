@@ -1,12 +1,26 @@
 cmake_minimum_required(VERSION 3.19)
-project(LongMath)
+
+find_program(GCC_COMPILER gcc)
+if(GCC_COMPILER)
+    message(STATUS "GCC found: ${GCC_COMPILER}")
+    set(CMAKE_C_COMPILER "gcc")
+    set(CMAKE_CXX_COMPILER "g++")
+else()
+    message(STATUS "GCC not found, falling back to Clang")
+    set(CMAKE_C_COMPILER "clang")
+    set(CMAKE_CXX_COMPILER "clang++")
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_compile_options(-O2 -O3)
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-Wthread-safety)
 endif()
+
+project(LongMath)
 
 include(FetchContent)
 
