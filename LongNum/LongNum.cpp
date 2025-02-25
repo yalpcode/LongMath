@@ -1,6 +1,7 @@
 #include "LongNum.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <sstream>
 
@@ -41,10 +42,10 @@ LongNum::LongNum(const long double x) {
         return;
     }
     sign = std::signbit(x);
-    exp = static_cast<int>(std::ceil(std::log2(std::abs(x))));
+    exp = static_cast<int>(ceil(log2(::abs(x))));
     if (exp >= 0) ++exp;
 
-    long double frac = std::abs(x) / std::pow(2, exp);
+    long double frac = ::abs(x) / pow(2, exp);
 
     for (uint32_t i = 0; i < prec * k_mant; ++i) {
         frac *= 2;
