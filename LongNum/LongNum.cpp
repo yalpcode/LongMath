@@ -75,7 +75,7 @@ LongNum::LongNum(std::string s) {
 
     std::reverse(mant.begin(), mant.end());
 
-    exp = mant.size();
+    exp = int32_t(mant.size());
     for (size_t i = 0; i < expCount; ++i) {
         *this /= 10;
     }
@@ -291,9 +291,9 @@ LongNum LongNum::operator*(const LongNum& other) const {
     res.mant.assign(len, 0);
     res.exp = exp + other.exp;
 
-    for (int i = mant.size() - 1; i >= 0; --i) {
+    for (int i = int(mant.size()) - 1; i >= 0; --i) {
         int carry = 0;
-        for (int j = other.mant.size() - 1; j >= 0; --j) {
+        for (int j = int(other.mant.size()) - 1; j >= 0; --j) {
             int product = mant[i] * other.mant[j] + res.mant[i + j + 1] + carry;
             res.mant[i + j + 1] = product & 1;
             carry = product >> 1;
@@ -332,19 +332,19 @@ LongNum LongNum::operator/(const LongNum& other) const {
 }
 
 LongNum& LongNum::operator+=(const LongNum& other) {
-    return *this = std::move(*this + other);
+    return *this = *this + other;
 }
 
 LongNum& LongNum::operator-=(const LongNum& other) {
-    return *this = std::move(*this - other);
+    return *this = *this - other;
 }
 
 LongNum& LongNum::operator*=(const LongNum& other) {
-    return *this = std::move(*this * other);
+    return *this = *this * other;
 }
 
 LongNum& LongNum::operator/=(const LongNum& other) {
-    return *this = std::move(*this / other);
+    return *this = *this / other;
 }
 
 LongNum LongNum::inverse() const {
@@ -471,7 +471,7 @@ std::string multiplyByTwo(const std::string& number) {
     std::string result;
     int carry = 0;
 
-    for (int i = number.length() - 1; i >= 0; --i) {
+    for (int i = int(number.length()) - 1; i >= 0; --i) {
         int currentDigit = number[i] - '0';
         int value = currentDigit * 2 + carry;
         carry = value / 10;
@@ -490,8 +490,8 @@ std::string multiplyByTwo(const std::string& number) {
 std::string addStrings(const std::string& num1, const std::string& num2) {
     std::string result;
     int carry = 0;
-    int i = num1.length() - 1;
-    int j = num2.length() - 1;
+    int i = int(num1.length()) - 1;
+    int j = int(num2.length()) - 1;
 
     while (i >= 0 || j >= 0 || carry > 0) {
         int digit1 = (i >= 0) ? num1[i] - '0' : 0;
@@ -525,7 +525,7 @@ std::string roundStrings(const std::string& number, int n) {
 
     char nextChar = number[roundPos];
     if (nextChar >= '5' && nextChar <= '9') {
-        int i = roundedStr.length() - 1;
+        int i = int(roundedStr.length()) - 1;
         while (i >= 0) {
             if (roundedStr[i] == '.') {
                 --i;
