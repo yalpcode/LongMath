@@ -92,12 +92,6 @@ int main(int argc, char** argv) {
 
     auto pi = CalculatePi(precision);
 
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> duration = end - start;
-
-    std::cout << "Время выполнения функции: " << duration.count() << " секунд"
-              << std::endl;
-
     std::string calculatedPi = pi.toString().substr(0, precision + 2);
 
     std::string correctPi =
@@ -110,6 +104,12 @@ int main(int argc, char** argv) {
               << calculatedPi.length() << std::endl;
 
     EXPECT_EQ(calculatedPi, correctPi) << "Calculated Pi failed.";
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+
+    std::cout << "Время выполнения функции: " << duration.count() << " секунд"
+              << std::endl;
 
     // ::benchmark::Initialize(&argc, argv);
     // if (::benchmark::ReportUnrecognizedArguments(argc, argv)) {
