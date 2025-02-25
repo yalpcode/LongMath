@@ -28,7 +28,7 @@ static void BM_CalculatePi(benchmark::State& state) {
 
         LongMath::LongNum pi;
 
-        for (size_t k = 0; k < precision; ++k) {
+        for (size_t k = 0; k <= precision; ++k) {
             pi = pi + n0 * (a0 / a - b0 / b - c0 / c - d0 / d);
             n0 = n0 / n;
             a += 8;
