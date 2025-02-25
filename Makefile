@@ -11,3 +11,6 @@ pi:
 
 test:
 	cd build && ./mathtest
+
+clear:
+	rm -rf ./build
