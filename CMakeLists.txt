@@ -21,6 +21,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(benchmark)
 
+if(TARGET benchmark)
+    target_compile_options(benchmark INTERFACE -Wno-unused-but-set-variable)
+    target_compile_options(benchmark INTERFACE -Wshorten-64-to-32)
+    target_compile_options(benchmark INTERFACE -Wthread-safety)
+endif()
+
 FetchContent_Declare(
     gflags
     GIT_REPOSITORY https://github.com/gflags/gflags.git
