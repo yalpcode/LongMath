@@ -4,6 +4,8 @@ project(LongMath)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_compile_options(-Wall -Wextra -Wpedantic -Wshorten-64-to-32 -Wthread-safety)
+
 include(FetchContent)
 
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -23,8 +25,6 @@ FetchContent_MakeAvailable(benchmark)
 
 if(TARGET benchmark)
     target_compile_options(benchmark INTERFACE -Wno-unused-but-set-variable)
-    target_compile_options(benchmark INTERFACE -Wshorten-64-to-32)
-    target_compile_options(benchmark INTERFACE -Wthread-safety)
 endif()
 
 FetchContent_Declare(
