@@ -4,7 +4,9 @@ project(LongMath)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_compile_options(-Wall -Wextra -Wpedantic -Wthread-safety)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(-Wthread-safety)
+endif()
 
 include(FetchContent)
 
@@ -36,8 +38,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(gflags)
 
 add_executable(main main.cpp)
-
-target_compile_options(main INTERFACE -Wthread-safety)
 
 include_directories(LongNum)
 add_subdirectory(LongNum)
